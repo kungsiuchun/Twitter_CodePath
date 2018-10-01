@@ -4,7 +4,7 @@
 <dict>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.codepath.twitter-alamofire-demo</string>
+		<string>$(AppIdentifierPrefix)com.codepath.siuchuntwitter-alamofire-demo</string>
 	</array>
 </dict>
 </plist>

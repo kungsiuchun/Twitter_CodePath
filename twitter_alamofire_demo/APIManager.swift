@@ -22,25 +22,24 @@ class APIManager: SessionManager {
     static let authorizeURL = "https://api.twitter.com/oauth/authorize"
     static let accessTokenURL = "https://api.twitter.com/oauth/access_token"
     
+    
     static let callbackURLString = "alamoTwitter://"
     
     // MARK: Twitter API methods
     func login(success: @escaping () -> (), failure: @escaping (Error?) -> ()) {
-        
         // Add callback url to open app when returning from Twitter login on web
         let callbackURL = URL(string: APIManager.callbackURLString)!
         oauthManager.authorize(withCallbackURL: callbackURL, success: { (credential, _response, parameters) in
-            
             // Save Oauth tokens
             self.save(credential: credential)
-            
             self.getCurrentAccount(completion: { (user, error) in
                 if let error = error {
                     failure(error)
                 } else if let user = user {
                     print("Welcome \(user.name)")
-                    
                     // MARK: TODO: set User.current, so that it's persisted
+                    User.currentUser = user
+                    
                     
                     success()
                 }
@@ -50,6 +49,16 @@ class APIManager: SessionManager {
         }
     }
     
+     func logout() {
+        // 1. Clear current user
+        User.current = nil
+        
+        // TODO: 2. Deauthorize OAuth tokens
+        
+        
+        // 3. Post logout notification
+        NotificationCenter.default.post(name: NSNotification.Name("didLogout"), object: nil)
+    }
 
     func getCurrentAccount(completion: @escaping (User?, Error?) -> ()) {
         request(URL(string: "https://api.twitter.com/1.1/account/verify_credentials.json")!)
@@ -64,7 +73,7 @@ class APIManager: SessionManager {
                         completion(nil, JSONError.parsing("Unable to create user dictionary"))
                         return
                     }
-                    completion(User(dictionary: userDictionary), nil)
+                    completion(User(dict: userDictionary as NSDictionary), nil)
                 }
         }
     }
@@ -76,7 +85,7 @@ class APIManager: SessionManager {
         if let data = UserDefaults.standard.object(forKey: "hometimeline_tweets") as? Data {
             let tweetDictionaries = NSKeyedUnarchiver.unarchiveObject(with: data) as! [[String: Any]]
             let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
-                Tweet(dictionary: dictionary)
+                Tweet(dictionary: dictionary as NSDictionary)
             })
 
             completion(tweets, nil)
@@ -103,20 +112,93 @@ class APIManager: SessionManager {
                     UserDefaults.standard.synchronize()
 
                     let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
-                        Tweet(dictionary: dictionary)
+                        Tweet(dictionary: dictionary as NSDictionary)
                     })
                     completion(tweets, nil)
                 }
         }
     }
     
+    // for figuring when the tweet was created
+    static func timeSince(timeStamp: Date) -> String {
+        let since = timeStamp.timeIntervalSinceNow
+        
+        if since < 60 * 60 * 24 {
+            let seconds = -Int(since.truncatingRemainder(dividingBy: 60))
+            let minutes = -Int((since / 60).truncatingRemainder(dividingBy: 60))
+            let hours = -Int((since / 3600))
+            
+            let result = (hours == 0 ? "" : "\(hours)h ") + (minutes == 0 ? "" : "\(minutes)m ") + (seconds == 0 ? "" : "\(seconds)s")
+            return result
+        } else {
+            let formatter: DateFormatter = {
+                let f = DateFormatter()
+                f.dateFormat = "EEE/MMM/d"
+                return f
+            }()
+            return formatter.string(from: timeStamp as Date)
+        }
+    }
+    
     // MARK: TODO: Favorite a Tweet
+    func favorite(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/favorites/create.json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary as NSDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
     
     // MARK: TODO: Un-Favorite a Tweet
+    func unfavorite(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/favorites/destroy.json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters as Parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary as NSDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
     
     // MARK: TODO: Retweet
+    func retweet(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/statuses/retweet.json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters as Parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary as NSDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
+    
     
     // MARK: TODO: Un-Retweet
+    func unretweet(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let path = "https://api.twitter.com/1.1/statuses/unretweet/\(tweet.id!).json"
+        request(URL(string: path)!, method: .post).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary as NSDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
     
     // MARK: TODO: Compose Tweet
     
@@ -152,12 +234,15 @@ class APIManager: SessionManager {
         
         // Assign oauth request adapter to Alamofire SessionManager adapter to sign requests
         adapter = oauthManager.requestAdapter
+        
+
     }
     
     // MARK: Handle url
     // OAuth Step 3
     // Finish oauth process by fetching access token
     func handle(url: URL) {
+        print("url: \(url.description)")
         OAuth1Swift.handle(url: url)
     }
     

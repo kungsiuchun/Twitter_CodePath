@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import OAuthSwift
 
 class LoginViewController: UIViewController {
     
@@ -27,6 +28,7 @@ class LoginViewController: UIViewController {
     
     @IBAction func didTapLogin(_ sender: Any) {
         APIManager.shared.login(success: {
+             print ("I've logged in")
             self.performSegue(withIdentifier: "loginSegue", sender: nil)
         }) { (error) in
             if let error = error {

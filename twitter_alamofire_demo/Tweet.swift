@@ -11,64 +11,81 @@ import Foundation
 
 class Tweet: NSObject {
     
-    // MARK: Properties
-    var id: Int? // For favoriting, retweeting & replying
-    var text: String? // Text content of tweet
-    var favoriteCount: Int? // Update favorite count label
-    var favorited: Bool? // Configure favorite button
-    var retweetCount: Int? // Update favorite count label
-    var retweeted: Bool? // Configure retweet button
-    var user: User? // Author of the Tweet
-    var createdAtString: String? // String representation of date posted
+    var text: String?
+    var id: Int64? // For favoriting, retweeting & replying
+    var timeStamp: NSDate?
+    var retweetCount: Int = 0
+    var favoritesCount: Int = 0
+    var userDictionary: NSDictionary
+    var name: String
+    var username: String
+    var imageUrl: NSURL
+    var favorite: Bool?
+    var retweet: Bool?
+    var retweet_status: Tweet?
+    var currentUserRetweet: String?
+    var idString: String?
     
-    // For Retweets
-    var retweetedByUser: User?  // user who retweeted if tweet is retweet
+    // for printing purpose only
+    var raw_tweet: NSDictionary?
     
-    init(dictionary: [String: Any]) {
-        var dictionary = dictionary
+    init(dictionary: NSDictionary) {
+        raw_tweet = dictionary
+        text = dictionary["text"] as? String
+        retweetCount = (dictionary["retweet_count"] as? Int) ?? 0
+        favoritesCount  = (dictionary["favorite_count"] as? Int) ?? 0
+        idString = dictionary["id_str"] as? String
+        id = dictionary["id"] as? Int64
         
-        // Is this a re-tweet?
-        if let originalTweet = dictionary["retweeted_status"] as? [String: Any] {
-            let userDictionary = dictionary["user"] as! [String: Any]
-            self.retweetedByUser = User(dictionary: userDictionary)
-            
-            // Change tweet to original tweet
-            dictionary = originalTweet
+        // the user associated with the user
+        let ss = dictionary["user"]
+        userDictionary = ss as! NSDictionary
+        name = userDictionary["name"] as! String
+        username = (userDictionary["screen_name"] as? String)!
+        imageUrl = NSURL(string: userDictionary["profile_image_url_https"] as! String)!
+        
+        let timestampString = dictionary["created_at"] as? String
+        if let timestampString = timestampString {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE MMM d HH:mm:ss Z y"
+            timeStamp = formatter.date(from: timestampString) as NSDate?
         }
         
-        id = dictionary["id"] as? Int
-        text = dictionary["text"] as? String
-        favoriteCount = dictionary["favorite_count"] as? Int
-        favorited = dictionary["favorited"] as? Bool
-        retweetCount = (dictionary["retweet_count"] as! Int)
-        retweeted = dictionary["retweeted"] as? Bool
+        let currentUserRetweetDict = dictionary["current_user_retweet"] as? NSDictionary
+        if currentUserRetweetDict != nil {
+            currentUserRetweet = (currentUserRetweetDict?["id_str"] as AnyObject) as? String
+        } else {
+            currentUserRetweet = nil
+        }
         
-        // TODO: initialize user
-        let user = dictionary["user"] as! [String: Any]
-        self.user = User(dictionary: user)
+        retweet = dictionary["retweeted"] as? Bool
         
-        // TODO: Format and set createdAtString
-        // Format createdAt date string
-        let createdAtOriginalString = dictionary["created_at"] as! String
-        let formatter = DateFormatter()
-        // Configure the input format to parse the date string
-        formatter.dateFormat = "E MMM d HH:mm:ss Z y"
-        // Convert String to Date
-        let date = formatter.date(from: createdAtOriginalString)!
-        // Configure output format
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
-        // Convert Date to String and set the createdAtString property
-        createdAtString = formatter.string(from: date)
+        let retweet_status_dict = (dictionary["retweeted_status"] as? NSDictionary) ?? nil
+        if retweet_status_dict != nil {
+            retweet_status = Tweet(dictionary: retweet_status_dict!)
+        } else {
+            retweet_status = nil
+        }
+        favorite = dictionary["favorited"] as? Bool
+        
     }
     
-    static func tweets(with array: [[String: Any]]) -> [Tweet] {
-        var tweets: [Tweet] = []
-        for tweetDictionary in array {
-            let tweet = Tweet(dictionary: tweetDictionary)
+    class func getArrayOfTweets(dictionaries: [NSDictionary]) -> [Tweet] {
+        var tweets = [Tweet]()
+        for dictionary in dictionaries {
+            let tweet = Tweet(dictionary: dictionary)
             tweets.append(tweet)
         }
+        
         return tweets
+    }
+    
+    func printTweetsUser() {
+        print("\(userDictionary)")
+    }
+    
+    func printAll() {
+        print("\(raw_tweet)")
     }
 
 }
