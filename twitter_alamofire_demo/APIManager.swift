@@ -38,6 +38,7 @@ class APIManager: SessionManager {
                 } else if let user = user {
                     print("Welcome \(user.name)")
                     // MARK: TODO: set User.current, so that it's persisted
+                  
                     User.currentUser = user
                     
                     
@@ -52,7 +53,7 @@ class APIManager: SessionManager {
      func logout() {
         // 1. Clear current user
         User.current = nil
-        
+        clearCredentials()
         // TODO: 2. Deauthorize OAuth tokens
         
         
@@ -111,9 +112,11 @@ class APIManager: SessionManager {
                     UserDefaults.standard.set(data, forKey: "hometimeline_tweets")
                     UserDefaults.standard.synchronize()
 
-                    let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
-                        Tweet(dictionary: dictionary as NSDictionary)
-                    })
+//                    let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
+//                        Tweet(dictionary: dictionary as NSDictionary)
+//                        let tweetDict = response as! [NSDictionary]
+                    let tweets = Tweet.getArrayOfTweets(dictionaries: tweetDictionaries as [NSDictionary])
+//                    })
                     completion(tweets, nil)
                 }
         }
@@ -144,7 +147,7 @@ class APIManager: SessionManager {
     func favorite(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
         let urlString = "https://api.twitter.com/1.1/favorites/create.json"
         let parameters = ["id": tweet.id]
-        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+        request(urlString, method: .post, parameters: parameters as Parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
             if response.result.isSuccess,
                 let tweetDictionary = response.result.value as? [String: Any] {
                 let tweet = Tweet(dictionary: tweetDictionary as NSDictionary)
@@ -201,8 +204,45 @@ class APIManager: SessionManager {
     }
     
     // MARK: TODO: Compose Tweet
+    func composeTweet(with text: String, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/statuses/update.json"
+        let parameters = ["status": text]
+        oauthManager.client.post(urlString, parameters: parameters, headers: nil, body: nil, success: { (response: OAuthSwiftResponse) in
+            let tweetDictionary = try! response.jsonObject() as! [String: Any]
+            let tweet = Tweet(dictionary: tweetDictionary as NSDictionary)
+            completion(tweet, nil)
+        }) { (error: OAuthSwiftError) in
+            completion(nil, error.underlyingError)
+        }
+    }
     
     // MARK: TODO: Get User Timeline
+    func getNewHomeTimeLine(completion: @escaping ([Tweet]?, Error?) -> ()) {
+        request(URL(string: "https://api.twitter.com/1.1/statuses/home_timeline.json")!, method: .get)
+            .validate()
+            .responseJSON { (response) in
+                switch response.result {
+                case .failure(let error):
+                    completion(nil, error)
+                    return
+                case .success:
+                    guard let tweetDictionaries = response.result.value as? [[String: Any]] else {
+                        print("Failed to parse tweets")
+                        let error = NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey : "Failed to parse tweets"])
+                        completion(nil, error)
+                        return
+                    }
+                    let data = NSKeyedArchiver.archivedData(withRootObject: tweetDictionaries)
+                    UserDefaults.standard.set(data, forKey: "hometimeline_tweets")
+                    UserDefaults.standard.synchronize()
+                    
+                    let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
+                        Tweet(dictionary: dictionary as NSDictionary)
+                    })
+                    completion(tweets, nil)
+                }
+        }
+    }
     
     
     //--------------------------------------------------------------------------------//

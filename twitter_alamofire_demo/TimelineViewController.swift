@@ -8,22 +8,28 @@
 
 import UIKit
 
-class TimelineViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class TimelineViewController: UIViewController, UITableViewDataSource, UITableViewDelegate
+    , UIScrollViewDelegate{
+     var isMoreDataLoading = false
 
     @IBOutlet weak var tableView: UITableView!
     
+    var refreshControl:UIRefreshControl!
     var tweets: [Tweet]!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        tableView.dataSource = self
-        tableView.delegate = self
+//        tableView.delegate = self
         
-        let refreshControl = UIRefreshControl()
+        refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: #selector(refreshControlAction(_:)), for: UIControlEvents.valueChanged)
-        // add refresh control to table view
         tableView.insertSubview(refreshControl, at: 0)
+        tableView.dataSource = self
+        tableView.rowHeight = UITableViewAutomaticDimension
+        tableView.estimatedRowHeight = 120
+        
+        getHomeline()
         
         // Do any additional setup after loading the view.
     }
@@ -32,26 +38,36 @@ class TimelineViewController: UIViewController, UITableViewDataSource, UITableVi
         APIManager.shared.logout()
     }
     
-   override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(true)
+    
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if (!isMoreDataLoading) {
+            // Calculate the position of one screen length before the bottom of the results
+            let scrollViewContentHeight = tableView.contentSize.height
+            let scrollOffsetThreshold = scrollViewContentHeight - tableView.bounds.size.height
+            
+            // When the user has scrolled past the threshold, start requesting
+            if(scrollView.contentOffset.y > scrollOffsetThreshold && tableView.isDragging) {
+                isMoreDataLoading = true
+                // Code to load more results
+                getHomeline()
+            }
+        }
+    }
+    
+ func getHomeline(){
             APIManager.shared.getHomeTimeLine { (allTweets: [Tweet]!, error) in
              
             self.tweets = allTweets
             // update table
             self.tableView.reloadData()
             print ("view appeared")
-    }
-    
+        }
+    refreshControl.endRefreshing()
     }
     
     func refreshControlAction(_ refreshControl: UIRefreshControl) {
-
-        APIManager.shared.getHomeTimeLine { (allTweets: [Tweet]?, error) in
-            self.tweets = allTweets
-                // update table
-            self.tableView.reloadData()
-            refreshControl.endRefreshing()
-        }
+       getHomeline()
     }
 
     override func didReceiveMemoryWarning() {
@@ -84,6 +100,11 @@ class TimelineViewController: UIViewController, UITableViewDataSource, UITableVi
         print ("Composing")
         self.performSegue(withIdentifier: "replySegue", sender: sender)
     }
+    
+    @IBAction func onProfile(_ sender: Any) {
+        self.performSegue(withIdentifier: "profileViewSegue", sender: sender)
+    }
+    
     
     
     
@@ -136,7 +157,12 @@ class TimelineViewController: UIViewController, UITableViewDataSource, UITableVi
             print ("reply Segue")
         }
         
+        if segue.identifier == "profileViewSegue" {
+            let controller = segue.destination as! ProfileViewController
         
+            controller.user = User.currentUser
+            print ("profileViewSegue Segue")
+        }
     }
 
     /*

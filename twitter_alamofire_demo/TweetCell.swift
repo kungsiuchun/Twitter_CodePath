@@ -17,9 +17,9 @@ class TweetCell: UITableViewCell {
     @IBOutlet weak var retweetButton: UIButton!
     @IBOutlet weak var favoriteButton: UIButton!
     @IBOutlet weak var tweetText: UILabel!
-    
     @IBOutlet weak var thumbnailImageView: UIImageView!
-    
+    @IBOutlet weak var favoriteCount: UILabel!
+    @IBOutlet weak var retweetCount: UILabel!
     @IBOutlet weak var timeStampLabel: UILabel!
     @IBOutlet weak var usernameLabel: UILabel!
     @IBOutlet weak var displayNameLabel: UILabel!
@@ -33,13 +33,18 @@ class TweetCell: UITableViewCell {
             tweetText.text = tweet.text
             usernameLabel.text = "@\(tweet.username)"
             
-            if (tweet.favorite == true) {
-                favoriteButton.setImage(#imageLiteral(resourceName: "favor-icon-red"), for: .normal)
+            if let cnt = tweet.favoritesCount{
+                favoriteCount.text = String(cnt)
             }
-            
-            if (tweet.retweet == true) {
-                retweetButton.setImage(#imageLiteral(resourceName: "retweet-icon-green"), for: .normal)
+//            else{
+//                favoriteCount.text = String(0)
+//            }
+            if let cnt = tweet.retweetCount{
+                retweetCount.text = String(cnt)
             }
+//            else{
+//                retweetCount.text = String(0)
+//            }
             
             // for time label
             if let timeStamp = tweet.timeStamp {
@@ -52,15 +57,16 @@ class TweetCell: UITableViewCell {
     
     @IBAction func tapLove(_ sender: Any) {
         if(!(tweet.favorite!)){
-            favoriteButton.setImage(#imageLiteral(resourceName: "favor-icon-red"), for: .normal)
+            let image = UIImage(named: "favor-icon-red")
+            favoriteButton.setImage(image, for: UIControlState.normal)
             tweet.favorite = true
             APIManager.shared.favorite(tweet) { (ntweet: Tweet?, error: Error?) in
                 if let  error = error {
                     print("Error favoriting tweet: \(error.localizedDescription)")
                 } else if let ntweet = ntweet {
                     print("Successfully favorited the following Tweet")
-//                    let count = ntweet.favoriteCount!
-//                    self.favoriteCount.text = String(count)
+                    let count = ntweet.favoritesCount!
+                    self.favoriteCount.text = String(count)
                 }
             }
         }else {
@@ -72,8 +78,8 @@ class TweetCell: UITableViewCell {
                     print("Error unfavoriting tweet: \(error.localizedDescription)")
                 } else if let ntweet = ntweet {
                     print("Successfully unfavorited the following Tweet")
-//                    let count = ntweet.favoriteCount!
-//                    self.favoriteCount.text = String(count)
+                    let count = ntweet.favoritesCount!
+                    self.favoriteCount.text = String(count)
                 }
             }
         }
@@ -83,15 +89,16 @@ class TweetCell: UITableViewCell {
     
     @IBAction func tapRetweet(_ sender: Any){
         if(!(tweet.retweet!)){
-            retweetButton.setImage(#imageLiteral(resourceName: "retweet-icon-green"), for: .normal)
+            let image = UIImage(named: "retweet-icon-green")
+            retweetButton.setImage(image, for: UIControlState.normal)
             tweet.retweet = true
             APIManager.shared.retweet(tweet) { (ntweet: Tweet?, error: Error?) in
                 if let  error = error {
                     print("Error retweet tweet: \(error.localizedDescription)")
                 } else if let ntweet = ntweet {
                     print("Successfully retweet the following Tweet")
-//                    let count = ntweet.retweetCount!
-//                    self.retweetCount.text = String(count)
+                    let count = ntweet.retweetCount!
+                    self.retweetCount.text = String(count)
                 }
             }
         }else {
@@ -103,13 +110,15 @@ class TweetCell: UITableViewCell {
                     print("Error unretweet tweet: \(error.localizedDescription)")
                 } else if let ntweet = ntweet {
                     print("Successfully unretweet the following Tweet")
-//                    let count = ntweet.retweetCount!
-//                    self.retweetCount.text = String(count)
+                    let count = ntweet.retweetCount!
+                    self.retweetCount.text = String(count)
                 }
             }
         }
     }
     
+    
+  
     
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -118,6 +127,7 @@ class TweetCell: UITableViewCell {
         thumbnailImageView.clipsToBounds = true
         // Initialization code
     }
+    
 
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)

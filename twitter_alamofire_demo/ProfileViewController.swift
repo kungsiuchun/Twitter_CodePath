@@ -8,7 +8,9 @@
 
 import UIKit
 
-class ProfileViewController: UIViewController {
+class ProfileViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+ 
+    
     
     @IBOutlet weak var ProfilePicImageView: UIImageView!
     
@@ -25,7 +27,10 @@ class ProfileViewController: UIViewController {
     @IBOutlet weak var BackgroundImageView: UIImageView!
     
     var user: User!
+    var tweets: [Tweet]!
+
     
+    @IBOutlet weak var tableView: UITableView!
     override func viewDidLoad() {
         super.viewDidLoad()
         ProfilePicImageView.setImageWith(user.profileURL!)
@@ -45,6 +50,10 @@ class ProfileViewController: UIViewController {
         let background_image_url = URL(string: bg_img_str)
         
         BackgroundImageView.setImageWith(background_image_url!)
+        tableView.dataSource = self
+        tableView.rowHeight = UITableViewAutomaticDimension
+        tableView.estimatedRowHeight = 120
+        getHomeline()
 
         // Do any additional setup after loading the view.
     }
@@ -52,6 +61,32 @@ class ProfileViewController: UIViewController {
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if self.tweets != nil {
+            return tweets.count
+        } else {
+            return 0
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "tweetCell", for: indexPath) as! TweetCell
+        cell.tweet = tweets[indexPath.row]
+        cell.selectionStyle = .none
+        
+        return cell
+    }
+    
+    func getHomeline(){
+        APIManager.shared.getHomeTimeLine { (allTweets: [Tweet]!, error) in
+            
+            self.tweets = allTweets
+            // update table
+            self.tableView.reloadData()
+            print ("view appeared")
+        }
     }
     
 
