@@ -46,19 +46,19 @@ class TweetDetailViewController: UIViewController {
             tweetCreatedTimeLabel.text = APIManager.timeSince(timeStamp: timeStamp as Date)
         }
         
+        if tweet.retweet!{
+            let image = UIImage(named: "retweet-icon-green")
+            retweetButton.setImage(image, for: UIControlState.normal)
+        }
+        if tweet.favorite! {
+            let image = UIImage(named: "favor-icon-red")
+            favoriteButton.setImage(image, for: UIControlState.normal)
+        }
         
-        if let cnt = tweet.favoritesCount{
-            countFavoritesLabel.text = String(cnt)
-        }
-        else{
-            countFavoritesLabel.text = String(0)
-        }
-        if let cnt = tweet.retweetCount{
-            countRetweetLabel.text = String(cnt)
-        }
-        else{
-            countRetweetLabel.text = String(0)
-        }
+        
+        countFavoritesLabel.text = String(tweet.favoritesCount)
+        countRetweetLabel.text = String(tweet.retweetCount)
+
 
         userPictureImage.setImageWith(tweet.imageUrl as URL)
         userPictureImage.layer.cornerRadius = 3
@@ -75,27 +75,27 @@ class TweetDetailViewController: UIViewController {
         if(!(tweet.retweet!)){
             let image = UIImage(named: "retweet-icon-green")
             retweetButton.setImage(image, for: UIControlState.normal)
+            tweet.retweetCount += 1
             tweet.retweet = true
             APIManager.shared.retweet(tweet) { (ntweet: Tweet?, error: Error?) in
                 if let  error = error {
                     print("Error retweet tweet: \(error.localizedDescription)")
-                } else if let ntweet = ntweet {
+                } else  {
                     print("Successfully retweet the following Tweet")
-                    let count = ntweet.retweetCount!
-                    self.countRetweetLabel.text = String(count)
+                    self.countRetweetLabel.text = String(self.tweet.retweetCount)
                 }
             }
         }else {
             let image = UIImage(named: "retweet-icon")
             retweetButton.setImage(image, for: UIControlState.normal)
+            tweet.retweetCount -= 1
             tweet.retweet = false
             APIManager.shared.unretweet(tweet) { (ntweet: Tweet?, error: Error?) in
                 if let  error = error {
                     print("Error unretweet tweet: \(error.localizedDescription)")
-                } else if let ntweet = ntweet {
+                } else {
                     print("Successfully unretweet the following Tweet")
-                    let count = ntweet.retweetCount!
-                    self.countRetweetLabel.text = String(count)
+                    self.countRetweetLabel.text = String(self.tweet.retweetCount)
                 }
             }
         }
@@ -105,27 +105,27 @@ class TweetDetailViewController: UIViewController {
         if(!(tweet.favorite!)){
             let image = UIImage(named: "favor-icon-red")
             favoriteButton.setImage(image, for: UIControlState.normal)
+            tweet.favoritesCount += 1
             tweet.favorite = true
             APIManager.shared.favorite(tweet) { (ntweet: Tweet?, error: Error?) in
                 if let  error = error {
                     print("Error favoriting tweet: \(error.localizedDescription)")
-                } else if let ntweet = ntweet {
+                } else {
                     print("Successfully favorited the following Tweet")
-                    let count = ntweet.favoritesCount!
-                    self.countFavoritesLabel.text = String(count)
+                    self.countFavoritesLabel.text = String(self.tweet.favoritesCount)
                 }
             }
         }else {
             let image = UIImage(named: "favor-icon")
             favoriteButton.setImage(image, for: UIControlState.normal)
+            tweet.favoritesCount -= 1
             tweet.favorite = false
             APIManager.shared.unfavorite(tweet) { (ntweet: Tweet?, error: Error?) in
                 if let  error = error {
                     print("Error unfavoriting tweet: \(error.localizedDescription)")
-                } else if let ntweet = ntweet {
+                } else {
                     print("Successfully unfavorited the following Tweet")
-                    let count = ntweet.favoritesCount!
-                    self.countFavoritesLabel.text = String(count)
+                    self.countFavoritesLabel.text = String(self.tweet.favoritesCount)
                 }
             }
         }

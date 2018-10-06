@@ -14,8 +14,8 @@ class Tweet: NSObject {
     var text: String?
     var id: Int64? // For favoriting, retweeting & replying
     var timeStamp: NSDate?
-    var retweetCount: Int?
-    var favoritesCount: Int?
+    var retweetCount: Int
+    var favoritesCount: Int
     var userDictionary: NSDictionary
     var name: String
     var username: String
@@ -33,8 +33,8 @@ class Tweet: NSObject {
     init(dictionary: NSDictionary) {
         raw_tweet = dictionary
         text = dictionary["text"] as? String
-        retweetCount = (dictionary["retweet_count"] as? Int)
-        favoritesCount  = (dictionary["favorite_count"] as? Int) 
+        retweetCount = dictionary["retweet_count"] as! Int
+        favoritesCount  = dictionary["favorite_count"] as! Int
         idString = dictionary["id_str"] as? String
         id = dictionary["id"] as? Int64
         

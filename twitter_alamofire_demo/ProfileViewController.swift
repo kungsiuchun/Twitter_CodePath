@@ -49,11 +49,14 @@ class ProfileViewController: UIViewController, UITableViewDataSource, UITableVie
         let bg_img_str = user.dict?["profile_background_image_url_https"] as! String
         let background_image_url = URL(string: bg_img_str)
         
+        
+        
         BackgroundImageView.setImageWith(background_image_url!)
         tableView.dataSource = self
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 120
         getHomeline()
+        
 
         // Do any additional setup after loading the view.
     }
@@ -75,7 +78,6 @@ class ProfileViewController: UIViewController, UITableViewDataSource, UITableVie
         let cell = tableView.dequeueReusableCell(withIdentifier: "tweetCell", for: indexPath) as! TweetCell
         cell.tweet = tweets[indexPath.row]
         cell.selectionStyle = .none
-        
         return cell
     }
     

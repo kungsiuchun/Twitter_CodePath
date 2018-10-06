@@ -11,18 +11,17 @@ import UIKit
 protocol ComposeViewControllerDelegate {
     func did(post: Tweet)
 }
-class ReplyViewController: UIViewController{
+class ReplyViewController: UIViewController, UITextViewDelegate{
     
     var tweet: Tweet!
     var reply: Bool!
     
     @IBOutlet weak var usernameLabel: UILabel!
-    
     @IBOutlet weak var profieImage: UIImageView!
     @IBOutlet weak var usernameHandle: UILabel!
+    @IBOutlet weak var tweetTextField: UITextView!
     
-    @IBOutlet weak var tweetTextField: UITextField!
-    
+    @IBOutlet weak var characterCountLabel: UILabel!
     var user: User!
     var delegate: ComposeViewControllerDelegate?
     
@@ -33,7 +32,8 @@ class ReplyViewController: UIViewController{
         profieImage?.setImageWith(user.profileURL!)
         usernameHandle?.text = ("@\(user.screenname!)")
         usernameLabel?.text = user.name!
-    
+        tweetTextField.delegate = self
+        tweetTextField.isEditable = true
         
         let rightButton = UIBarButtonItem(title: "Send", style: UIBarButtonItemStyle.done, target: self, action: #selector(onSend(_:)))
         
@@ -62,34 +62,28 @@ class ReplyViewController: UIViewController{
     
     @IBAction func onSend(_ sender: Any) {
          print ("Tweeted")
-        let reply_id: String
-        if self.reply == true {
-            reply_id = tweetTextField.text!
-        }
-        else {
-            reply_id = tweetTextField.text!
-        }
-        print ("\(reply_id)")
-        APIManager.shared.composeTweet(with: reply_id) { (tweet, error) in
+        APIManager.shared.composeTweet(with: tweetTextField.text!) { (tweet, error) in
             if let error = error {
                 print("Error composing Tweet: \(error.localizedDescription)")
-                // also create a alert
-                let errorAlertController = UIAlertController(title: "Error!", message: "\(error)", preferredStyle: .alert)
-                        // add ok button
-                let errorAction = UIAlertAction(title: "Ok", style: .default) { (action) in
-                                //dismiss
-                        }
-                errorAlertController.addAction(errorAction)
-                self.present(errorAlertController, animated: true)
-                
             } else if let tweet = tweet {
                 self.delegate?.did(post: tweet)
                 print("Compose Tweet Success!")
-                
-                _ = self.navigationController!.popViewController(animated: true)
-                
+                self.navigationController!.popViewController(animated: true)
             }
         }
+    }
+    
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        // TODO: Check the proposed new text character count
+        // Allow or disallow the new text
+        // Set the max character limit
+        let characterLimit = 140
+        // Construct what the new text would be if we allowed the user's latest edit
+        let newText = NSString(string: textView.text!).replacingCharacters(in: range, with: text)
+        // TODO: Update Character Count Label
+        characterCountLabel.text = String(characterLimit - newText.characters.count)
+        // The new text should be allowed? True/False
+        return newText.characters.count < characterLimit
     }
     
   
